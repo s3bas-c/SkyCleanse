@@ -7,7 +7,7 @@ def clamp01(x):
     return np.clip(x, 0, 1)
 
 # ----------------------------
-# 1. Noise (sensor + ISO noise)
+# 1. Noise
 # ----------------------------
 
 def add_noise(img, severity):
@@ -19,7 +19,7 @@ def add_noise(img, severity):
     return np.clip(out, 0, 1)
 
 # ----------------------------
-# 2. Blur / bad focus
+# 2. Blur
 # ----------------------------
 
 def add_blur(img, severity):
@@ -32,7 +32,7 @@ def add_blur(img, severity):
     return cv2.GaussianBlur(img, (k, k), 0)
 
 # ----------------------------
-# 3. Star trailing (motion blur)
+# 3. Star trailing
 # ----------------------------
 
 def add_star_trails(img, severity):
@@ -71,7 +71,7 @@ def add_star_trails(img, severity):
     return cv2.filter2D(img, -1, kernel)
 
 # ----------------------------
-# 7. Haze / atmospheric scattering
+# 7. Haze
 # ----------------------------
 
 def add_haze(img, severity):
@@ -100,7 +100,7 @@ def degrade_image(img,
     return img
 
 # ----------------------------
-# QUALITY SCORE (inverted severity)
+# QUALITY SCORE
 # ----------------------------
 
 def quality_score(noise, blur, trails, haze):
