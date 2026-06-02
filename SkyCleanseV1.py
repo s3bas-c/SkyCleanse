@@ -61,77 +61,27 @@ class SkyCleanse_v1(nn.Module):
         scores = self.final(scores)
         return scores
 
-class SC_dataset(Dataset):
-    def __init__(self):
-        super().__init__()
-        self.inputs = torch.from_numpy(np.load("astro_X.npy")).float()
-        self.targets = torch.from_numpy(np.load("astro_Y.npy")).float()
-
-    def __len__(self):
-        return len(self.inputs)
-    def __getitem__(self, index):
-        x = self.inputs[index]
-        x = x.unsqueeze(0)
-        return x, self.targets[index]
-    
-dataset = SC_dataset()
-dataloader = DataLoader(
-    dataset,
-    batch_size=256,
-    shuffle=True
-)
-
 model = SkyCleanse_v1()
 model = model.to(device)
-learning_rate = 0.0007
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-epochs = 50
+model.load_state_dict(torch.load("skycleanse_v1.pth"))
+model.eval()
 
+def inference(np_image):
+    #img = cv2.imread("input1.png", cv2.IMREAD_GRAYSCALE)
 
-def train():
-    best_loss = 1000
-    model.train()
-    for e in range(epochs):     
-        total_loss = 0
-        div = 0
-        for x, y in dataloader:
-            x = x.to(device)
-            y = y.to(device)
-            
-            optimizer.zero_grad()
-
-            pred = model(x)
-            loss = F.huber_loss(pred, y)
-            loss.backward()
-
-            optimizer.step()
-            total_loss += loss.item()
-            div += 1
-        if (total_loss / div) < best_loss:
-            best_loss = total_loss / div
-            torch.save(model.state_dict(), "skycleanse_v1.pth")
-        print(f"{e+1}. loss, {total_loss / div}")
-
-#train()
-
-def inference():
-    model.load_state_dict(torch.load("skycleanse_v1.pth"))
-    model.eval()
-
-    img = cv2.imread("input1.png", cv2.IMREAD_GRAYSCALE)
-
-    img = img.astype(np.float32)
-    img = (img - img.min()) / (img.max() - img.min() + 1e-8)
+    #img = img.astype(np.float32)
+    np_image = (np_image - np_image.min()) / (np_image.max() - np_image.min() + 1e-8)
     
-    img = torch.from_numpy(img).float()
+    img = torch.from_numpy(np_image).float()
 
     img = img.unsqueeze(0).unsqueeze(0).to(device)
 
     with torch.no_grad():
         pred = model(img).squeeze(0)
 
-    total = (((1 - pred.item()) ** 1.5) * 10)
+    total = (((1 - pred.item())) * 10)
 
     print(f"--- IMAGE EVALUATION ---> {round(total, 1)}/10")
+    return round(total, 1)
     
-inference()
+#inference()
