@@ -16,6 +16,8 @@ import numpy as np
 import sys
 import os
 
+import SkyCleanseV1 as sky
+
 class ElideButton(widg.QPushButton):
     def __init__(self, text, parent=None):
         super().__init__(parent)
@@ -96,9 +98,9 @@ class input_container(widg.QFrame):
                         self.files.append(file)
 
                         full_path = os.path.join(root, file)
-                        self.paths.append(full_path)
 
                         if file.lower().endswith((".fits", ".fit", ".tiff", ".tif", ".jpeg", ".jpg", ".png")):
+                            self.paths.append(full_path)
                             new_file_button = ElideButton(file)
                             new_file_button.setFixedHeight(30)
                             new_file_button.setMinimumWidth(360)
@@ -139,6 +141,8 @@ class input_container(widg.QFrame):
         #print(f"Paths: {self.paths}")
     
     def score_frames(self):
+        path_index = 0
+
         for i in range(self.input_layout.count()):
             item = self.input_layout.itemAt(i)
             if not item:
@@ -155,8 +159,33 @@ class input_container(widg.QFrame):
             score_text = score_item.widget()
             if not score_text:
                 continue
+            
+            if self.paths[path_index].lower().endswith((".jpeg", ".jpg", ".png", ".tiff", ".tif")):
+                img = cv2.imread(self.paths[path_index], cv2.IMREAD_GRAYSCALE)
 
-            score_text.setText("10/10")
+                img = img.astype(np.float32)
+                score = sky.inference(img)
+            elif self.paths[path_index].lower().endswith((".fits", ".fit")): 
+                # Stretch
+                data = fits.getdata(self.paths[path_index])
+
+                data = np.nan_to_num(data).astype(np.float32)
+
+                data -= np.percentile(data, 30)
+                data = np.clip(data, 0, np.percentile(data, 99.5))
+
+                data /= (data.max() + 1e-8)
+                data = np.arcsinh(data * 0.2)
+                data /= data.max()
+
+                data = (data * 255).astype(np.float32)
+                score = sky.inference(data)
+            else:
+                print("ERROR: file not supported")
+
+            path_index += 1
+    
+            score_text.setText(f"{score}/10")
 
 class image_container(widg.QFrame):
     def __init__(self):
@@ -199,7 +228,7 @@ class image_container(widg.QFrame):
 
             data = np.nan_to_num(data).astype(np.float32)
 
-            data -= np.percentile(data, 5)
+            data -= np.percentile(data, 30)
             data = np.clip(data, 0, np.percentile(data, 99.5))
 
             data /= (data.max() + 1e-8)
